@@ -1,6 +1,7 @@
 package mygame;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.audio.AudioNode;
 import com.jme3.input.KeyInput;
 import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
@@ -30,10 +31,14 @@ public class Lab1 extends SimpleApplication {
     protected Node pivot;
     protected Node sphereNode;
     protected Node cylinderNode;
+    protected Node soundNode;
+    protected AudioNode audio_gun;
+    
     protected int reverse = 1;
     protected int opposite = 1;
     protected boolean toggle = false; //If whole system spins
     protected boolean cylinderVisible = true;
+    protected float cpt = 1; //Used for keeping scale
 
     private void initNodeTree(){
 
@@ -52,6 +57,9 @@ public class Lab1 extends SimpleApplication {
 
         cylinderNode = new Node("cylinderNode");
         pivot.attachChild(cylinderNode);
+        
+        soundNode = new Node("audioNode");
+        center.attachChild(soundNode);
     }
 
     private void initShapes() {
@@ -62,6 +70,13 @@ public class Lab1 extends SimpleApplication {
                 "Common/MatDefs/Misc/Unshaded.j3md");
         mat1.setColor("Color", ColorRGBA.Blue);
         blue.setMaterial(mat1);
+        
+        Box box2 = new Box(0.1f,0.1f,0.1f);
+        Geometry green = new Geometry("Box2", box2);
+        Material matg = new Material(assetManager,
+                "Common/MatDefs/Misc/Unshaded.j3md");
+        matg.setColor("Color", ColorRGBA.Green);
+        green.setMaterial(matg);
 
         Cylinder cyl = new Cylinder(32,32,2f,3f, true);
         Geometry red = new Geometry("Cylinder", cyl);
@@ -82,6 +97,12 @@ public class Lab1 extends SimpleApplication {
         center.attachChild(blue);
         cylinderNode.attachChild(red);
         sphereNode.attachChild(yellow);
+        soundNode.attachChild(green);
+        center.move(0, 0, -20f);
+        pivot.move(8f, 0, 0);
+        sphereNode.move(0, 3f, 0);
+        cylinderNode.move(0, -2f, 0);
+        soundNode.move(20f, 0, 0);
     }
 
     private void initKeys() {
@@ -105,17 +126,21 @@ public class Lab1 extends SimpleApplication {
 
   };
 
+    private void initSound() {
+        audio_gun = new AudioNode(assetManager, "Sound/Effects/Gun.wav", false);
+        audio_gun.setPositional(true);
+        audio_gun.setLooping(false);
+        audio_gun.setVolume(1);
+        soundNode.attachChild(audio_gun);
+    }
+    
     @Override
     public void simpleInitApp() {
 
         initNodeTree();
         initShapes();
         initKeys();
-
-        center.move(0, 0, -20f);
-        pivot.move(8f, 0, 0);
-        sphereNode.move(0, 3f, 0);
-        cylinderNode.move(0, -2f, 0);
+        initSound();
         /** Rotate the pivot node: Note that both boxes have rotated! */
         //pivot.rotate(.4f,.4f,0f);
     };
@@ -135,6 +160,7 @@ private ActionListener actionListener = new ActionListener() {
             if (cylinderVisible){
                 cylinderVisible = false;
                 cylinderNode.removeFromParent();
+                audio_gun.playInstance();
             }
             else {
                 cylinderVisible = true;
@@ -162,12 +188,15 @@ private AnalogListener analogListener = new AnalogListener() {
                 center.getChild("Box").rotate(0, 0, -1f*tpf);
             }
         }
-        //Make this scale with TPF
+        //Consider only scaling the sphere and then
+        //scale position of snowballs.
         if (name.equals("Grow")) {
-            sphereNode.scale(1.0005f);
+            cpt += tpf;
+            sphereNode.setLocalScale(cpt);
         }
         if (name.equals("Shrink")) {
-            sphereNode.scale(0.9995f);
+            cpt -= tpf;
+            sphereNode.setLocalScale(cpt);
         }
     }
 };
@@ -177,5 +206,7 @@ private AnalogListener analogListener = new AnalogListener() {
         // make the player rotate:
         center.rotate(0, 0.5f*tpf*reverse, 0);
         pivot.rotate(0,0,2.5f*tpf*opposite);
+        listener.setLocation(cam.getLocation());
+        listener.setRotation(cam.getRotation());
     }
 }
